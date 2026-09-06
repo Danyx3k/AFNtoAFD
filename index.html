@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conversor AFN a AFD | Construcción por Subconjuntos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Vis.js Network for interactive automaton graph visualization -->
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-background">
+    <div class="glow-sphere sphere-1"></div>
+    <div class="glow-sphere sphere-2"></div>
+    <div class="glow-sphere sphere-3"></div>
+  </div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-content">
+        <div class="logo-wrapper">
+          <div class="logo-icon">
+            <i data-lucide="git-merge"></i>
+          </div>
+          <div>
+            <h1 class="logo-title">AFN <span class="gradient-text">➔ AFD</span> Studio</h1>
+            <p class="logo-subtitle">Conversor por Construcción de Subconjuntos & Simulador Gráfico</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary btn-sm" id="btn-clear-all" title="Limpiar y reiniciar formulario">
+            <i data-lucide="rotate-ccw"></i> Reiniciar
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace Grid -->
+    <main class="main-workspace">
+      
+      <!-- Left Column: Input Form & Transitions -->
+      <section class="card input-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="card-badge"><i data-lucide="sliders"></i> Paso 1</div>
+            <h2>Definición del AFN</h2>
+          </div>
+          <span class="badge-status">Sin transiciones &epsilon;</span>
+        </div>
+
+        <form id="afn-form" onsubmit="return false;">
+          <div class="form-grid">
+            <!-- Alfabeto -->
+            <div class="form-group">
+              <label for="input-alphabet">
+                <span>Alfabeto (&Sigma;)</span>
+                <span class="tooltip" data-tooltip="Separar por comas (ej. a, b, c, d, e, f)"><i data-lucide="help-circle"></i></span>
+              </label>
+              <div class="input-wrapper">
+                <i data-lucide="type" class="input-icon"></i>
+                <input type="text" id="input-alphabet" placeholder="a, b" value="a, b" required autocomplete="off">
+              </div>
+            </div>
+
+            <!-- Estados -->
+            <div class="form-group">
+              <label for="input-states">
+                <span>Estados (Q)</span>
+                <span class="tooltip" data-tooltip="Separar por comas (ej. q0, q1, q2)"><i data-lucide="help-circle"></i></span>
+              </label>
+              <div class="input-wrapper">
+                <i data-lucide="circle-dot" class="input-icon"></i>
+                <input type="text" id="input-states" placeholder="q0, q1, q2" value="q0, q1, q2" required autocomplete="off">
+              </div>
+            </div>
+
+            <!-- Estado Inicial -->
+            <div class="form-group">
+              <label for="input-initial">
+                <span>Estado Inicial (q<sub>0</sub>)</span>
+                <span class="tooltip" data-tooltip="Debe pertenecer a Q"><i data-lucide="help-circle"></i></span>
+              </label>
+              <div class="input-wrapper">
+                <i data-lucide="arrow-right-circle" class="input-icon text-accent"></i>
+                <input type="text" id="input-initial" placeholder="q0" value="q0" required autocomplete="off">
+              </div>
+            </div>
+
+            <!-- Estados Finales -->
+            <div class="form-group">
+              <label for="input-finals">
+                <span>Estados Finales (F)</span>
+                <span class="tooltip" data-tooltip="Separar por comas (ej. q2)"><i data-lucide="help-circle"></i></span>
+              </label>
+              <div class="input-wrapper">
+                <i data-lucide="check-circle-2" class="input-icon text-success"></i>
+                <input type="text" id="input-finals" placeholder="q2" value="q2" required autocomplete="off">
+              </div>
+            </div>
+          </div>
+
+          <!-- Transiciones del AFN -->
+          <div class="transitions-section">
+            <div class="section-title-bar">
+              <div class="section-heading">
+                <i data-lucide="table"></i>
+                <h3>Matriz de Transiciones</h3>
+              </div>
+              <div class="view-toggles">
+                <button type="button" class="btn-toggle active" id="btn-mode-matrix" title="Editar en Matriz">
+                  <i data-lucide="grid"></i> Matriz
+                </button>
+                <button type="button" class="btn-toggle" id="btn-mode-list" title="Editar en Lista">
+                  <i data-lucide="list"></i> Lista
+                </button>
+              </div>
+            </div>
+
+            <!-- Vista Matriz Compacta y Angosta -->
+            <div id="matrix-container" class="matrix-scroll-wrapper">
+              <table class="matrix-table" id="matrix-table">
+                <thead>
+                  <tr id="matrix-header-row">
+                    <th class="col-state">Estado</th>
+                    <!-- Dynamic Alphabet Headers -->
+                  </tr>
+                </thead>
+                <tbody id="matrix-body">
+                  <!-- Dynamic Matrix Rows -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Vista Lista (Alternativa) -->
+            <div id="list-container" class="list-transitions-view hidden" style="margin-top:0.6rem;">
+              <div class="quick-add-bar">
+                <input type="text" id="quick-origin" placeholder="q0" class="mini-input" style="width:70px;">
+                <input type="text" id="quick-symbol" placeholder="a" class="mini-input" style="width:50px;">
+                <input type="text" id="quick-destinations" placeholder="q0, q1" class="mini-input flex-1">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-add-transition">
+                  <i data-lucide="plus"></i>
+                </button>
+              </div>
+              <div class="transitions-chips-list" id="transitions-chips">
+                <!-- Transition items -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Botón de Conversión -->
+          <div class="action-footer">
+            <button type="button" class="btn btn-primary btn-glow" id="btn-convert">
+              <i data-lucide="cpu"></i> Convertir AFN a AFD
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right Column: Results, Visualizer & Simulator -->
+      <section class="results-area" id="results-area">
+        
+        <!-- Navigation Tabs -->
+        <div class="tabs-nav">
+          <button class="tab-btn active" data-tab="tab-graphs">
+            <i data-lucide="share-2"></i> Visualizador de Grafos
+          </button>
+          <button class="tab-btn" data-tab="tab-tables">
+            <i data-lucide="table"></i> Tablas de Transición
+          </button>
+          <button class="tab-btn" data-tab="tab-trace">
+            <i data-lucide="binary"></i> Proceso Paso a Paso
+          </button>
+          <button class="tab-btn" data-tab="tab-simulator">
+            <i data-lucide="play-circle"></i> Simulador de Cadenas
+          </button>
+        </div>
+
+        <!-- Tab 1: Graph Visualizer -->
+        <div class="tab-content active" id="tab-graphs">
+          <div class="card graph-card">
+            <div class="graph-toolbar">
+              <div class="graph-selector">
+                <button class="btn-pill active" id="btn-show-afd-graph">AFD Resultante</button>
+                <button class="btn-pill" id="btn-show-afn-graph">AFN Original</button>
+              </div>
+              <div class="graph-controls">
+                <button class="btn-physics-toggle physics-on" id="btn-physics-graph" title="Pausar o fijar posiciones de los nodos">
+                  <i data-lucide="zap"></i> <span id="physics-status-text">Física: Activa</span>
+                </button>
+                <button class="btn-icon" id="btn-zoom-in" title="Acercar (+)"><i data-lucide="zoom-in"></i></button>
+                <button class="btn-icon" id="btn-zoom-out" title="Alejar (-)"><i data-lucide="zoom-out"></i></button>
+                <button class="btn-icon" id="btn-fit-graph" title="Ajustar y Centrar vista"><i data-lucide="maximize"></i></button>
+                <button class="btn-icon" id="btn-download-graph" title="Descargar como PNG"><i data-lucide="download"></i></button>
+              </div>
+            </div>
+
+            <div class="graph-viewport-wrapper">
+              <div id="automaton-network" class="network-canvas"></div>
+              <div class="graph-legend">
+                <div class="legend-item"><span class="legend-dot start-dot"></span> ➔ Inicial</div>
+                <div class="legend-item"><span class="legend-dot final-dot"></span> ⊚ Aceptación</div>
+                <div class="legend-item"><span class="legend-dot normal-dot"></span> Normal</div>
+                <div class="legend-item"><span class="legend-dot active-dot"></span> Activo</div>
+                <div class="legend-item" style="color:#38bdf8;"><i data-lucide="move" style="width:12px;height:12px;display:inline;"></i> Arrastra los nodos libremente</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Transition Tables -->
+        <div class="tab-content" id="tab-tables">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-badge"><i data-lucide="check-check"></i> AFD</div>
+                <h2>Tabla de Transiciones del AFD Resultante</h2>
+              </div>
+              <button class="btn btn-secondary btn-sm" id="btn-copy-afd-table">
+                <i data-lucide="copy"></i> Copiar Tabla
+              </button>
+            </div>
+            
+            <div class="table-responsive">
+              <table class="data-table afd-result-table" id="afd-result-table">
+                <thead>
+                  <tr id="afd-table-header">
+                    <th>Estado AFD</th>
+                    <!-- Dynamic Symbols -->
+                  </tr>
+                </thead>
+                <tbody id="afd-table-body">
+                  <!-- Dynamic AFD Rows -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="table-legend-footer">
+              <span class="legend-badge initial-badge">➔ Estado inicial</span>
+              <span class="legend-badge final-badge">* Estado de aceptación</span>
+              <span class="legend-badge trap-badge">&empty; Estado muerto / trampa</span>
+            </div>
+
+            <!-- Formal Definition Card -->
+            <div class="formal-def-box" id="formal-def-box">
+              <h3>Definición Formal M = (Q', &Sigma;, &delta;', q'<sub>0</sub>, F')</h3>
+              <div class="formal-def-grid" id="formal-def-content">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Step-by-step Trace -->
+        <div class="tab-content" id="tab-trace">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-badge"><i data-lucide="list-ordered"></i> Explicación</div>
+                <h2>Construcción por Subconjuntos (Algoritmo de Potencias)</h2>
+              </div>
+            </div>
+            <p class="section-desc">
+              Cada estado del AFD representa un conjunto de estados del AFN. Se calcula la unión de movimientos $\delta'(S, \sigma) = \bigcup_{p \in S} \delta(p, \sigma)$.
+            </p>
+            <div class="trace-steps-container" id="trace-steps-container">
+              <!-- Step items injected by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: String Simulator -->
+        <div class="tab-content" id="tab-simulator">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-badge"><i data-lucide="play"></i> Evaluación</div>
+                <h2>Probador de Cadenas en el AFD</h2>
+              </div>
+            </div>
+
+            <div class="simulator-input-box">
+              <div class="form-group flex-1">
+                <label for="sim-input-string">Cadena a evaluar (&omega;):</label>
+                <div class="input-wrapper">
+                  <i data-lucide="terminal" class="input-icon"></i>
+                  <input type="text" id="sim-input-string" placeholder="Ej: abab" value="ab" autocomplete="off">
+                </div>
+              </div>
+              <div class="sim-actions-bar">
+                <button class="btn btn-primary" id="btn-sim-run">
+                  <i data-lucide="play"></i> Evaluar Directo
+                </button>
+                <button class="btn btn-secondary" id="btn-sim-step">
+                  <i data-lucide="step-forward"></i> Paso a Paso
+                </button>
+                <button class="btn btn-secondary" id="btn-sim-reset">
+                  <i data-lucide="rotate-ccw"></i> Reiniciar
+                </button>
+              </div>
+            </div>
+
+            <!-- Simulator Visual Tape -->
+            <div class="simulator-tape-wrapper">
+              <div class="tape-label">Cinta de Entrada:</div>
+              <div class="tape-cells" id="sim-tape-cells">
+                <!-- Cells injected by JS -->
+              </div>
+            </div>
+
+            <!-- Current State Banner -->
+            <div class="sim-state-banner" id="sim-state-banner">
+              <div class="sim-state-info">
+                <span class="state-label">Estado Actual:</span>
+                <span class="state-value" id="sim-current-state-val">-</span>
+              </div>
+              <div class="sim-verdict-badge" id="sim-verdict-badge">
+                Esperando evaluación...
+              </div>
+            </div>
+
+            <!-- Simulation Execution History Log -->
+            <div class="sim-history-box">
+              <h4>Historial de Transiciones:</h4>
+              <div class="sim-log-list" id="sim-log-list">
+                <div class="sim-log-item muted">Presione "Evaluar Directo" o "Paso a Paso" para iniciar la simulación.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Conversor de Autómatas Finitos &bull; Algoritmo de Construcción por Subconjuntos</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
